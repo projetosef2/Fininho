@@ -1,0 +1,197 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Labirinto sobre o livro Fininho</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f5f5f5;
+    }
+    canvas {
+      border: 2px solid black;
+      display: block;
+      margin: 20px auto;
+      background-color: white;
+    }
+    #question-box {
+      display: none;
+      background: white;
+      border: 1px solid #ddd;
+      padding: 15px;
+      width: 300px;
+      margin: 0 auto;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <h1>LABIRINTO SOBRE O LIVRO FININHO</h1>
+  <canvas id="maze" width="600" height="600"></canvas>
+  <div id="question-box">
+    <p id="question-text"></p>
+    <button onclick="checkAnswer(true)">Verdadeiro</button>
+    <button onclick="checkAnswer(false)">Falso</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('maze');
+    const ctx = canvas.getContext('2d');
+    const cellSize = 40;
+    const cols = canvas.width / cellSize;
+    const rows = canvas.height / cellSize;
+
+    let player = { x: 0, y: 0 };
+    let exit = { x: 14, y: 14 };
+    let moving = true; // Controle para permitir o movimento
+
+    let questions = [
+      { text: "Fininho é um garoto que se destaca no futebol da escola devido à sua altura e força física.", answer: false },
+      { text: "No início da história, Fininho se sente totalmente confiante e seguro em relação à sua aparência.", answer: false },
+      { text: "O livro 'Fininho' aborda temas como autoaceitação e superação de desafios pessoais.", answer: true },
+      { text: "Durante a narrativa, Fininho aprende que seu verdadeiro valor vai além da aparência física.", answer: true },
+      { text: "Os amigos de Fininho sempre o apoiam e nunca fazem piadas sobre sua aparência.", answer: false },
+      { text: "Na frase 'Fininho corre tão rápido quanto um raio', há um exemplo de comparação.", answer: true },
+      { text: "'Eu sou muito magro!' Na frase, a palavra 'muito' intensifica a ideia expressa pelo adjetivo.", answer: true },
+      { text: "Na frase 'Ele era o garoto mais rápido da escola', o termo 'mais rápido' está no grau comparativo de superioridade.", answer: false },
+      { text: "Na expressão 'Ele treinava todos os dias para melhorar sua velocidade', o termo 'para' indica finalidade.", answer: true },
+      { text: "No trecho 'Ele nunca desistia, apesar das dificuldades', a palavra 'apesar' expressa uma ideia de consequência.", answer: false },
+      { text: "A autoestima é a forma como enxergamos e valorizamos a nós mesmos.", answer: true },
+      { text: "A resiliência significa desistir facilmente diante dos desafios.", answer: false },
+      { text: "Ter apoio emocional de amigos e familiares pode ajudar a superar inseguranças.", answer: true },
+      { text: "O preconceito com a aparência física pode impactar a confiança e o bem-estar das pessoas.", answer: true },
+      { text: "Todos os desafios enfrentados na vida servem apenas para nos enfraquecer.", answer: false },
+      { text: "O futebol é um esporte que trabalha apenas a força física, sem exigir habilidades estratégicas.", answer: false },
+      { text: "A disciplina e a dedicação nos treinos são fundamentais para o sucesso de um atleta.", answer: true },
+      { text: "A velocidade é um fator essencial para um atacante no futebol.", answer: true },
+      { text: "Ter talento natural no esporte é mais importante do que treinar e se esforçar.", answer: false },
+      { text: "No esporte, a motivação e o trabalho em equipe são tão importantes quanto a habilidade individual.", answer: true }
+    ];
+
+    // Labirinto gerado com caminhos interligados
+    const mazeLayout = [
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0],
+      [0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0],
+      [0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0],
+      [0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0],
+      [0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0],
+      [0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1],
+      [0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0],
+      [0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0],
+      [0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+      [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0],
+      [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+      [1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0],
+      [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0]
+    ];
+
+    function drawMaze() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          if (mazeLayout[y][x] === 1) {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          } else {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          }
+          ctx.strokeStyle = 'gray';
+          ctx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
+        }
+      }
+
+      // Desenha o ponto de saída
+      ctx.fillStyle = 'green';
+      ctx.fillRect(exit.x * cellSize, exit.y * cellSize, cellSize, cellSize);
+      ctx.fillStyle = 'black';
+      ctx.fillText("Fim", exit.x * cellSize + 5, exit.y * cellSize + 25);
+
+      // Desenha a palavra "Início" fixa
+      ctx.fillStyle = 'black';
+      ctx.fillText("Início", 0 * cellSize + 5, 0 * cellSize + 25); // Fixo no (0, 0)
+
+      // Desenha o botão de jogador (azul) que se move
+      ctx.fillStyle = 'blue';
+      ctx.fillRect(player.x * cellSize, player.y * cellSize, cellSize, cellSize);
+    }
+
+    function showQuestion() {
+      const randomIndex = Math.floor(Math.random() * questions.length);
+      const question = questions[randomIndex];
+      document.getElementById('question-text').textContent = question.text;
+      document.getElementById('question-box').dataset.correctAnswer = question.answer;
+      document.getElementById('question-box').style.display = 'block';
+    }
+
+    function checkAnswer(answer) {
+      const correctAnswer = document.getElementById('question-box').dataset.correctAnswer === 'true';
+      if (answer === correctAnswer) {
+        alert('Resposta correta! Continue!');
+        document.getElementById('question-box').style.display = 'none';
+        moving = true; // Permitir movimento
+      } else {
+        alert('Resposta incorreta. Você voltará para o início!');
+        player.x = 0; // Volta para o início
+        player.y = 0; // Volta para o início
+        drawMaze();
+        moving = true; // Permitir movimento novamente
+        document.getElementById('question-box').style.display = 'none'; // Fecha a caixa de pergunta
+      }
+    }
+
+    function movePlayer(dx, dy) {
+      if (!moving) return; // Se não está autorizado a mover, não faz nada
+
+      const newX = player.x + dx;
+      const newY = player.y + dy;
+
+      // Verifica os limites do labirinto e se o caminho está livre
+      if (newX < 0 || newY < 0 || newX >= cols || newY >= rows || mazeLayout[newY][newX] === 1) return;
+
+      player.x = newX;
+      player.y = newY;
+      drawMaze();
+
+      // Verifica se a pergunta deve ser ativada
+      if ((player.x + player.y) % 3 === 0) { // Exemplo: a cada 3 casas
+        moving = false; // Bloqueia movimento até resposta
+        showQuestion(); // Pergunta após andar 3 casas
+      }
+
+      // Verifica vitória
+      if (player.x === exit.x && player.y === exit.y) {
+        alert('PARABÉNS! VOCÊ COMPLETOU O LABIRINTO!');
+      }
+    }
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowUp') {
+        movePlayer(0, -1);
+      } else if (event.key === 'ArrowDown') {
+        movePlayer(0, 1);
+      } else if (event.key === 'ArrowLeft') {
+        movePlayer(-1, 0);
+      } else if (event.key === 'ArrowRight') {
+        movePlayer(1, 0);
+      }
+    });
+
+    drawMaze();
+  </script>
+</body>
+</html>
